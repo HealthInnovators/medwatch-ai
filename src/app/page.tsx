@@ -32,9 +32,7 @@ const VoiceInput = ({onResult}: { onResult: (transcript: string) => void }) => {
     };
 
     recognitionRef.current.onerror = (event) => {
-      if (event.error !== 'aborted') {
-        console.error('Speech recognition error:', event.error);
-      }
+      console.warn('Speech recognition error:', event.error);
       setIsListening(false);
     };
 
@@ -51,15 +49,9 @@ const VoiceInput = ({onResult}: { onResult: (transcript: string) => void }) => {
     } else {
       try {
         recognitionRef.current?.start();
-      } catch (error: any) {
-        // Check if the error is due to no speech input
-        if (error.message.includes('no-speech')) {
-          console.warn('No speech input detected.');
-          setIsListening(false);
-        } else {
-          console.error('Error starting speech recognition:', error);
-          setIsListening(false);
-        }
+      } catch (error) {
+        console.error('Error starting speech recognition:', error);
+        setIsListening(false);
       }
     }
   };
@@ -90,6 +82,11 @@ export default function Home() {
   const [conversationHistory, setConversationHistory] = useState<AiReportingAssistantInput['conversationHistory']>([]);
   const [aiResponse, setAiResponse] = useState('');
   const [reportSummary, setReportSummary] = useState('');
+  const [isVoiceInputEnabled, setIsVoiceInputEnabled] = useState(false);
+
+  useEffect(() => {
+    setIsVoiceInputEnabled(userInput.length > 0);
+  }, [userInput]);
 
   const handleSendMessage = async () => {
     if (!userInput) return;
