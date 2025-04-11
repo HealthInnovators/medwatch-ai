@@ -12,26 +12,27 @@ import {Icons} from '@/components/icons';
 
 const VoiceInput = ({onResult}: { onResult: (transcript: string) => void }) => {
   const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef<SpeechRecognitionService | null>(null);
+  const [recognitionRef, setRecognitionRef] = useState<SpeechRecognitionService | null>(null);
 
   useEffect(() => {
-    recognitionRef.current = new SpeechRecognitionService();
+    const recognitionService = new SpeechRecognitionService();
+    setRecognitionRef(recognitionService);
 
-    recognitionRef.current.onresult = (event) => {
+    recognitionService.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
       onResult(transcript);
       setIsListening(false);
     };
 
-    recognitionRef.current.onstart = () => {
+    recognitionService.onstart = () => {
       setIsListening(true);
     };
 
-    recognitionRef.current.onend = () => {
+    recognitionService.onend = () => {
       setIsListening(false);
     };
 
-    recognitionRef.current.onerror = (event) => {
+    recognitionService.onerror = (event) => {
       // Handle specific errors more gracefully
       if (event.error === 'no-speech') {
         console.warn('No speech detected.');
@@ -44,18 +45,18 @@ const VoiceInput = ({onResult}: { onResult: (transcript: string) => void }) => {
     };
 
     return () => {
-      recognitionRef.current?.abort();
+      recognitionService.abort();
     };
   }, [onResult]);
 
   const toggleListening = () => {
-    if (!recognitionRef.current) return;
+    if (!recognitionRef) return;
 
     if (isListening) {
-      recognitionRef.current?.stop();
+      recognitionRef?.stop();
     } else {
       try {
-        recognitionRef.current?.start();
+        recognitionRef?.start();
       } catch (error) {
         console.error('Error starting speech recognition:', error);
         setIsListening(false);
@@ -67,7 +68,7 @@ const VoiceInput = ({onResult}: { onResult: (transcript: string) => void }) => {
     <Button
       variant="outline"
       onClick={toggleListening}
-      disabled={!recognitionRef.current}
+      disabled={!recognitionRef}
     >
       {isListening ? (
         <>
