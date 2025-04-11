@@ -32,6 +32,12 @@ const VoiceInput = ({onResult}: { onResult: (transcript: string) => void }) => {
     };
 
     recognitionService.onerror = (event) => {
+      if (event.error === 'aborted') {
+        // Do not treat "aborted" as a general error. It happens normally when the user pauses.
+        console.log('Speech recognition aborted.');
+        setIsListening(false);
+        return;
+      }
       console.error('Speech recognition error:', event.error);
       setIsListening(false);
     };
@@ -215,3 +221,4 @@ export default function Home() {
     </div>
   );
 }
+
