@@ -42,9 +42,9 @@ export async function aiReportingAssistant(input: AiReportingAssistantInput): Pr
 const feedbackQuestions = [
   // Section A: About the Problem
   "What kind of problem did you experience? (Were you hurt or did you have a bad side effect? Did you use a product incorrectly? Did you notice a quality issue with the product? Did the problem occur after switching from one product maker to another?)",
-  "What was the outcome of the problem? (Hospitalization, Required help to prevent permanent harm, Disability, Birth defect, Life-threatening event, Death, Other serious incident)",
+  "What was the outcome of the problem? (Check all that apply) - Hospitalization (Admitted or stayed longer), Required help to prevent permanent harm, Disability or long-term health problem, Birth defect, Life-threatening event, Death (Please enter date), Other serious/important incident (Please describe)",
   "What date did the problem occur?",
-  "Describe what happened, how it happened, and why you think it happened.",
+  "Describe what happened, how it happened, and why you think it happened. (Encourage details)",
   "Were there any relevant lab tests or medical results? If yes, what were they and when were they done?",
 
   // Section B: Product Availability
@@ -56,7 +56,7 @@ const feedbackQuestions = [
   "What is the name of the product (as shown on packaging)?",
   "Is the therapy still ongoing?",
   "Who is the manufacturer or company that makes the product?",
-  "What type of product is it? (Over-the-Counter / Compounded / Generic / Biosimilar)",
+  "What type of product is it? (Select all that apply) - Over-the-Counter, Compounded, Generic, Biosimilar",
   "Expiration date of the product?",
   "Lot number?",
   "NDC (National Drug Code) number?",
@@ -177,8 +177,13 @@ const aiReportingAssistantFlow = ai.defineFlow<
     const productType = reportData['question_7'].toLowerCase();
     skipSectionD = productType.includes('pill') || productType.includes('syrup') || productType.includes('injection');
   }
-  
-  if (currentQuestionIndex < feedbackQuestions.length) {
+
+  if (conversationHistory.length === 0) {
+    // If it's a new conversation, start with the first question.
+    response = feedbackQuestions[0];
+    nextQuestionIndex = 0; // Initialize currentQuestionIndex
+  }
+  else if (currentQuestionIndex < feedbackQuestions.length) {
     // Respond to the user's input to the current question
     response = `Okay, I have recorded: ${trimmedUserInput}. `;
 
