@@ -32,7 +32,9 @@ const VoiceInput = ({onResult}: { onResult: (transcript: string) => void }) => {
     };
 
     recognitionRef.current.onerror = (event) => {
-      console.error('Speech recognition error:', event.error);
+      if (event.error !== 'aborted') {
+        console.error('Speech recognition error:', event.error);
+      }
       setIsListening(false);
     };
 
