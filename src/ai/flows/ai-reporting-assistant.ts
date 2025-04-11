@@ -57,13 +57,7 @@ const prompt = ai.definePrompt({
   Here's the user's input: {{{userInput}}}
 
   Here's the conversation history:
-  {{#each conversationHistory}}
-    {{#if (eq role "user")}}
-      User: {{{content}}}
-    {{else}}
-      Assistant: {{{content}}}
-    {{/if}}
-  {{/each}}
+  {{conversationHistory}}
 
   Based on the user's input and the conversation history, respond appropriately. If this is the start of a new conversation, begin by asking the user what product they were using.
   If the user provides an unclear response, ask follow-up questions to get more details.
@@ -83,9 +77,15 @@ const aiReportingAssistantFlow = ai.defineFlow<
   const {userInput, conversationHistory = []} = input;
   // Trim whitespace from the user input to handle voice input effectively
   const trimmedUserInput = userInput.trim();
+
+  // Format conversation history
+  const formattedConversationHistory = conversationHistory
+    .map(message => `${message.role === 'user' ? 'User' : 'Assistant'}: ${message.content}`)
+    .join('\n');
+
   const {output} = await prompt({
     userInput: trimmedUserInput,
-    conversationHistory: input.conversationHistory,
+    conversationHistory: formattedConversationHistory,
   });
 
   const newAssistantMessage = {
