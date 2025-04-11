@@ -47,7 +47,18 @@ const VoiceInput = ({onResult}: { onResult: (transcript: string) => void }) => {
     if (isListening) {
       recognitionRef.current?.stop();
     } else {
-      recognitionRef.current?.start();
+      try {
+        recognitionRef.current?.start();
+      } catch (error: any) {
+        // Check if the error is due to no speech input
+        if (error.message.includes('no-speech')) {
+          console.warn('No speech input detected.');
+          setIsListening(false);
+        } else {
+          console.error('Error starting speech recognition:', error);
+          setIsListening(false);
+        }
+      }
     }
   };
 
@@ -208,4 +219,3 @@ export default function Home() {
     </div>
   );
 }
-
