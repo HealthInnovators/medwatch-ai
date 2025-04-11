@@ -58,7 +58,7 @@ const prompt = ai.definePrompt({
 
   Here's the conversation history:
   {{#each conversationHistory}}
-    {{#if (eq role \"user\")}}
+    {{#if (eq role "user")}}
       User: {{{content}}}
     {{else}}
       Assistant: {{{content}}}
@@ -104,4 +104,3 @@ const aiReportingAssistantFlow = ai.defineFlow<
     updatedConversationHistory: updatedConversationHistory,
   };
 });
-
