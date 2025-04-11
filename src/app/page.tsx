@@ -146,6 +146,8 @@ export default function Home() {
           <CardTitle>MedWatch AI Assistant</CardTitle>
           <CardDescription>
             A conversational AI tool to guide you through the adverse event reporting process.
+            <br/>
+            To get started, type your response in the input box or use the voice input feature.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex-grow overflow-y-auto">
@@ -221,4 +223,3 @@ export default function Home() {
     </div>
   );
 }
-
