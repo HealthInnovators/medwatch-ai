@@ -171,6 +171,13 @@ const aiReportingAssistantFlow = ai.defineFlow<
   let isEndOfQuestions = false;
   let updatedReportData = {...reportData};
 
+  // Check if we should skip Section D
+  let skipSectionD = false;
+  if (reportData['question_7'] && typeof reportData['question_7'] === 'string') {
+    const productType = reportData['question_7'].toLowerCase();
+    skipSectionD = productType.includes('pill') || productType.includes('syrup') || productType.includes('injection');
+  }
+  
   if (currentQuestionIndex < feedbackQuestions.length) {
     // Respond to the user's input to the current question
     response = `Okay, I have recorded: ${trimmedUserInput}. `;
@@ -180,6 +187,12 @@ const aiReportingAssistantFlow = ai.defineFlow<
 
     // Move to the next question
     nextQuestionIndex = currentQuestionIndex + 1;
+
+    // Skip Section D if necessary
+    if (skipSectionD && nextQuestionIndex === 27) {
+      nextQuestionIndex = 37; // Jump to Section E
+    }
+
     if (nextQuestionIndex < feedbackQuestions.length) {
       response += feedbackQuestions[nextQuestionIndex]; // Ask the next question
     } else {
