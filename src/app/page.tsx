@@ -12,16 +12,15 @@ import {Icons} from '@/components/icons';
 
 const VoiceInput = ({onResult}: { onResult: (transcript: string) => void }) => {
   const [isListening, setIsListening] = useState(false);
-  const [recognitionRef, setRecognitionRef] = useState<SpeechRecognitionService | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionService | null>(null);
 
   useEffect(() => {
     const recognitionService = new SpeechRecognitionService();
-    setRecognitionRef(recognitionService);
+    recognitionRef.current = recognitionService;
 
     recognitionService.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
       onResult(transcript);
-      setIsListening(false);
     };
 
     recognitionService.onstart = () => {
@@ -33,6 +32,7 @@ const VoiceInput = ({onResult}: { onResult: (transcript: string) => void }) => {
     };
 
     recognitionService.onerror = (event) => {
+      console.error('Speech recognition error:', event.error);
       setIsListening(false);
     };
 
@@ -42,13 +42,13 @@ const VoiceInput = ({onResult}: { onResult: (transcript: string) => void }) => {
   }, [onResult]);
 
   const toggleListening = () => {
-    if (!recognitionRef) return;
+    if (!recognitionRef.current) return;
 
     if (isListening) {
-      recognitionRef?.stop();
+      recognitionRef.current?.stop();
     } else {
       try {
-        recognitionRef?.start();
+        recognitionRef.current?.start();
       } catch (error) {
         console.error('Error starting speech recognition:', error);
         setIsListening(false);
@@ -60,7 +60,6 @@ const VoiceInput = ({onResult}: { onResult: (transcript: string) => void }) => {
     <Button
       variant="outline"
       onClick={toggleListening}
-      disabled={!recognitionRef}
     >
       {isListening ? (
         <>
@@ -82,7 +81,6 @@ export default function Home() {
   const [conversationHistory, setConversationHistory] = useState<AiReportingAssistantInput['conversationHistory']>([]);
   const [aiResponse, setAiResponse] = useState('');
   const [reportSummary, setReportSummary] = useState('');
-  const [isVoiceInputEnabled, setIsVoiceInputEnabled] = useState(true);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [reportData, setReportData] = useState({});
   const [isEndOfQuestions, setIsEndOfQuestions] = useState(false);
@@ -108,7 +106,7 @@ export default function Home() {
   };
 
   const handleVoiceInputResult = (transcript: string) => {
-    setUserInput(transcript);
+    setUserInput((prevInput) => prevInput + transcript);
   };
 
   const handlePreSubmissionReview = async () => {
