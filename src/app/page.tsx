@@ -1,12 +1,76 @@
 'use client';
 
-import {useState} from 'react';
+import {useState, useRef, useEffect} from 'react';
 import {AiReportingAssistantInput, aiReportingAssistant} from '@/ai/flows/ai-reporting-assistant';
 import {preSubmissionReview, PreSubmissionReviewInput} from '@/ai/flows/pre-submission-review';
 import {Button} from '@/components/ui/button';
 import {Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle} from '@/components/ui/card';
 import {Input} from '@/components/ui/input';
 import {Textarea} from '@/components/ui/textarea';
+import {SpeechRecognitionService} from '@/services/speech-recognition';
+import {Icons} from '@/components/icons';
+
+const VoiceInput = ({onResult}: { onResult: (transcript: string) => void }) => {
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<SpeechRecognitionService | null>(null);
+
+  useEffect(() => {
+    recognitionRef.current = new SpeechRecognitionService();
+
+    recognitionRef.current.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      onResult(transcript);
+      setIsListening(false);
+    };
+
+    recognitionRef.current.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognitionRef.current.onend = () => {
+      setIsListening(false);
+    };
+
+    recognitionRef.current.onerror = (event) => {
+      console.error('Speech recognition error:', event.error);
+      setIsListening(false);
+    };
+
+    return () => {
+      recognitionRef.current?.abort();
+    };
+  }, [onResult]);
+
+  const toggleListening = () => {
+    if (!recognitionRef.current) return;
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+    } else {
+      recognitionRef.current?.start();
+    }
+  };
+
+  return (
+    <Button
+      variant="outline"
+      onClick={toggleListening}
+      disabled={!recognitionRef.current}
+    >
+      {isListening ? (
+        <>
+          <Icons.spinner className="mr-2 h-4 w-4 animate-spin"/>
+          Listening...
+        </>
+      ) : (
+        <>
+          <Icons.mic className="mr-2 h-4 w-4"/>
+          Start Voice Input
+        </>
+      )}
+    </Button>
+  );
+};
 
 export default function Home() {
   const [userInput, setUserInput] = useState('');
@@ -27,6 +91,10 @@ export default function Home() {
     setAiResponse(aiResult.response);
     setConversationHistory(aiResult.updatedConversationHistory);
     setUserInput(''); // Clear the input after sending
+  };
+
+  const handleVoiceInputResult = (transcript: string) => {
+    setUserInput(transcript);
   };
 
   const handlePreSubmissionReview = async () => {
@@ -89,6 +157,7 @@ export default function Home() {
               }
             }}
           />
+          <VoiceInput onResult={handleVoiceInputResult}/>
           <Button onClick={handleSendMessage}>Send</Button>
         </CardFooter>
       </Card>
@@ -139,3 +208,4 @@ export default function Home() {
     </div>
   );
 }
+
