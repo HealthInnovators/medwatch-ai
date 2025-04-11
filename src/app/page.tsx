@@ -33,14 +33,6 @@ const VoiceInput = ({onResult}: { onResult: (transcript: string) => void }) => {
     };
 
     recognitionService.onerror = (event) => {
-      // Handle specific errors more gracefully
-      if (event.error === 'no-speech') {
-        console.warn('No speech detected.');
-      } else if (event.error === 'aborted') {
-        console.warn('Speech recognition aborted.');
-      } else {
-        console.error('Speech recognition error:', event.error);
-      }
       setIsListening(false);
     };
 
@@ -102,8 +94,8 @@ export default function Home() {
 
     const aiResult = await aiReportingAssistant(input);
 
-    setAiResponse(aiResult.response);
     setConversationHistory(aiResult.updatedConversationHistory);
+    setAiResponse(aiResult.response);
     setUserInput(''); // Clear the input after sending
   };
 
@@ -151,12 +143,6 @@ export default function Home() {
               <p className="inline-block bg-muted rounded-lg p-2">{message.content}</p>
             </div>
           ))}
-          {aiResponse && (
-            <div className="text-left mb-2">
-              <span className="font-bold">AI Assistant:</span>
-              <p className="inline-block bg-muted rounded-lg p-2">{aiResponse}</p>
-            </div>
-          )}
         </CardContent>
         <CardFooter className="flex items-center">
           <Input
