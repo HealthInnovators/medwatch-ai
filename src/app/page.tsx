@@ -83,6 +83,9 @@ export default function Home() {
   const [aiResponse, setAiResponse] = useState('');
   const [reportSummary, setReportSummary] = useState('');
   const [isVoiceInputEnabled, setIsVoiceInputEnabled] = useState(true);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [reportData, setReportData] = useState({});
+  const [isEndOfQuestions, setIsEndOfQuestions] = useState(false);
 
   const handleSendMessage = async () => {
     if (!userInput) return;
@@ -90,6 +93,8 @@ export default function Home() {
     const input: AiReportingAssistantInput = {
       userInput: userInput,
       conversationHistory: conversationHistory,
+      currentQuestionIndex: currentQuestionIndex,
+      reportData: reportData,
     };
 
     const aiResult = await aiReportingAssistant(input);
@@ -97,6 +102,9 @@ export default function Home() {
     setConversationHistory(aiResult.updatedConversationHistory);
     setAiResponse(aiResult.response);
     setUserInput(''); // Clear the input after sending
+    setCurrentQuestionIndex(aiResult.nextQuestionIndex || 0);
+    setReportData(aiResult.reportData || {});
+    setIsEndOfQuestions(aiResult.isEndOfQuestions || false);
   };
 
   const handleVoiceInputResult = (transcript: string) => {
@@ -182,11 +190,12 @@ export default function Home() {
         </Card>
       )}
 
-      {!reportSummary && (
+      {!reportSummary && isEndOfQuestions && (
         <div className="flex justify-center mt-4">
           <Button onClick={handlePreSubmissionReview}>Generate Report Summary</Button>
         </div>
       )}
+
       {/* Add footer for security information and FDA link */}
       <footer className="mt-8 text-center text-muted-foreground">
         <p>
