@@ -122,18 +122,20 @@ const spellCheckAndUnderstandPrompt = ai.definePrompt({
     schema: z.object({
       correctedText: z.string().describe('The user input text with spelling corrected.'),
       intentSummary: z.string().describe('A brief summary of the user\'s intent based on their response.'),
+      productType: z.string().optional().describe('The product type mentioned by the user (e.g., medicine, medical device).')
     }),
   },
   prompt: `Correct the spelling in the following text, and provide a summary of the user's intent in relation to the question being asked.
+Also, determine if the user is talking about a medication, medical device, or neither, by summarizing the type of the product in relation to the question being asked.
 
   Question: {{{currentQuestion}}}
 
   Text: {{{text}}}
 
-  Output the corrected text and a summary of the user's intent.`,
+  Output the corrected text, a summary of the user's intent, and the type of product mentioned, if any.`,
 });
 
-async function spellCheckAndUnderstand(text: string, currentQuestion: string): Promise<{correctedText: string, intentSummary: string}> {
+async function spellCheckAndUnderstand(text: string, currentQuestion: string): Promise<{correctedText: string, intentSummary: string, productType?: string}> {
   const {output} = await spellCheckAndUnderstandPrompt({
     text: text,
     currentQuestion: currentQuestion,
@@ -157,16 +159,10 @@ const aiReportingAssistantFlow = ai.defineFlow<
   let response = '';
   let isEndOfQuestions = false;
   let updatedReportData = {...reportData};
-
-  // Determine if the conversation history suggests a medication issue
-  const medicationMentioned = conversationHistory.some(message =>
-    message.content.toLowerCase().includes('pill') ||
-    message.content.toLowerCase().includes('syrup') ||
-    message.content.toLowerCase().includes('injection')
-  );
   let skipSectionD = false;
   let askSectionC = false;
 
+  //Determine if the product is a medical device.
   if (reportData['question_7'] && typeof reportData['question_7'] === 'string') {
     const productType = reportData['question_7'].toLowerCase();
     skipSectionD = productType.includes('cosmetic') || productType.includes('dietary supplement') || productType.includes('food') || productType.includes('other');
@@ -180,7 +176,7 @@ const aiReportingAssistantFlow = ai.defineFlow<
   else if (currentQuestionIndex < feedbackQuestions.length) {
     // Autocorrect the spelling in the user's input
     const currentQuestion = feedbackQuestions[currentQuestionIndex];
-    const {correctedText} = await spellCheckAndUnderstand(trimmedUserInput, currentQuestion);
+    const {correctedText, productType} = await spellCheckAndUnderstand(trimmedUserInput, currentQuestion);
 
     // Respond to the user's input to the current question
     response = `Okay, I have recorded: ${correctedText.replace(/\.+$/, '')}. `;
@@ -192,7 +188,7 @@ const aiReportingAssistantFlow = ai.defineFlow<
     nextQuestionIndex = currentQuestionIndex + 1;
 
     // Skip Section D if necessary
-    if (medicationMentioned && nextQuestionIndex >= 27 && nextQuestionIndex <= 36) {
+    if (productType?.includes('medicine') && nextQuestionIndex >= 27 && nextQuestionIndex <= 36) {
       nextQuestionIndex = 37; // Jump to Section E
     }
     else if (skipSectionD && nextQuestionIndex >= 27 && nextQuestionIndex <= 36) {
@@ -200,7 +196,7 @@ const aiReportingAssistantFlow = ai.defineFlow<
     }
 
     // Skip Section C if medical device is mentioned
-    if (!medicationMentioned && askSectionC && nextQuestionIndex >= 8 && nextQuestionIndex <= 26) {
+    if (productType?.includes('medical device') && askSectionC && nextQuestionIndex >= 8 && nextQuestionIndex <= 26) {
       // Skip Section C
       nextQuestionIndex = 27; // Jump to Section D
     }
