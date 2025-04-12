@@ -41,22 +41,22 @@ export async function aiReportingAssistant(input: AiReportingAssistantInput): Pr
 
 const feedbackQuestions = [
   // Section A: About the Problem
-  "What kind of problem did you experience? (Were you hurt or did you have a bad side effect? Did you use a product incorrectly? Did you notice a quality issue with the product? Did the problem occur after switching from one product maker to another?)",
-  "What was the outcome of the problem? (Check all that apply) - Hospitalization (Admitted or stayed longer), Required help to prevent permanent harm, Disability or long-term health problem, Birth defect, Life-threatening event, Death (Please enter date), Other serious/important incident (Please describe)",
+  "What kind of problem did you experience?\n • Were you hurt or did you have a bad side effect?\n • Did you use a product incorrectly?\n • Did you notice a quality issue with the product?\n • Did the problem occur after switching from one product maker to another?",
+  "What was the outcome of the problem? (Check all that apply)\n • Hospitalization (Admitted or stayed longer)\n • Required help to prevent permanent harm\n • Disability or long-term health problem\n • Birth defect\n • Life-threatening event\n • Death (Include date)\n • Other serious/important incidents (Please describe)",
   "What date did the problem occur?",
-  "Describe what happened, how it happened, and why you think it happened. (Encourage details)",
-  "Were there any relevant lab tests or medical results? If yes, what were they and when were they done?",
+  "Describe what happened, how it happened, and why you think it happened. (Include as many details as possible. FDA may reach out to you for any additional documents if necessary)",
+  "Were there any relevant lab tests or lab results? (Mention all the lab tests, lab results and dates performed)",
 
   // Section B: Product Availability
-  "Do you still have the product? (Yes/No)",
-  "Do you have a picture of the product? (Yes/No)",
+  "Do you still have the product in case we need to evaluate it? (Do not send the product to FDA. We will contact you directly if we need it.) (Yes/No)",
+  "Do you have a picture of the product? Upload the picture of the product. (Yes/No)",
 
   // Section C: About the Product (Only if it's NOT a medical device)
-  "What type of product is this? (Medicine / Cosmetic / Dietary Supplement / Food / Other)",
+  "What type of product is this? (Prescription / Medicine / Cosmetic / Dietary Supplement / Food / Other)",
   "What is the name of the product (as shown on packaging)?",
   "Is the therapy still ongoing?",
   "Who is the manufacturer or company that makes the product?",
-  "What type of product is it? (Select all that apply) - Over-the-Counter, Compounded, Generic, Biosimilar",
+  "What type of product is it? (Select all that apply)\n  • Over-the-Counter\n  • Compounded\n  • Generic\n  • Biosimilar",
   "Expiration date of the product?",
   "Lot number?",
   "NDC (National Drug Code) number?",
@@ -75,19 +75,19 @@ const feedbackQuestions = [
   // Section D: About the Medical Device (Only if the product is a medical device)
   "Name of the medical device?",
   "Manufacturer of the device?",
-  "Lot number?",
-  "NDC (National Drug Code) number?",
+  "Model number?",
+  "Catalog number?",
   "Lot number?",
   "Serial number?",
   "UDI (Unique Device Identifier) number?",
   "Expiration date?",
-  "Was someone using the device when the problem occurred?",
-  "For implants: When was the device implanted? Was it removed? When?",
+  "Was someone using the device when the problem occurred? If yes, who was using it? (Patient / Healthcare provider / Other)",
+  "For implants:\n • When was the device implanted?\n • Was it removed? When?",
 
   // Section E: About the Person Who Had the Problem
   "Person’s initials?",
   "Sex at birth? (Male/Female/Undifferentiated/Prefer not to say)",
-  "Gender identity?",
+  "Gender identity? (List options)",
   "Age (and unit: years/months/days)?",
   "Date of birth?",
   "Weight (in lb/kg)?",
