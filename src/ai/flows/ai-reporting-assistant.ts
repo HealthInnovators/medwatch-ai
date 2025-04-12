@@ -203,19 +203,19 @@ const aiReportingAssistantFlow = ai.defineFlow<
     }
 
     // Skip Section D if necessary
-    if (isMedication && nextQuestionIndex >= 27 && nextQuestionIndex <= 35) {
+    if ((isMedication || askSectionC) && nextQuestionIndex >= 26 && nextQuestionIndex <= 35) {
       nextQuestionIndex = 36; // Jump to Section E
       console.log('Skipping to section E: ', nextQuestionIndex);
     }
-    else if (skipSectionD && nextQuestionIndex >= 27 && nextQuestionIndex <= 35) {
+    else if (skipSectionD && nextQuestionIndex >= 26 && nextQuestionIndex <= 35) {
       nextQuestionIndex = 36; // Jump to Section E
       console.log('Skipping to section E: ', nextQuestionIndex);
     }
 
     // Skip Section C if medical device is mentioned
-    if (isMedicalDevice && askSectionC && nextQuestionIndex >= 8 && nextQuestionIndex <= 26) {
+    if (isMedicalDevice && askSectionC && nextQuestionIndex >= 8 && nextQuestionIndex <= 25) {
       // Skip Section C
-      nextQuestionIndex = 27; // Jump to Section D
+      nextQuestionIndex = 26; // Jump to Section D
       console.log('Skipping to section D: ', nextQuestionIndex);
     }
 
