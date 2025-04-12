@@ -18,6 +18,7 @@ const AiReportingAssistantInputSchema = z.object({
   })).optional().describe('The conversation history.'),
   currentQuestionIndex: z.number().optional().describe('The index of the current question being asked.'),
   reportData: z.record(z.any()).optional().describe('Data collected so far for the report.'),
+  imageUpload: z.string().optional().describe('Uploaded image as a base64 encoded string.'),
 });
 
 export type AiReportingAssistantInput = z.infer<typeof AiReportingAssistantInputSchema>;
@@ -49,7 +50,7 @@ const feedbackQuestions = [
 
   // Section B: Product Availability
   "Do you still have the product in case we need to evaluate it? (Do not send the product to FDA. We will contact you directly if we need it.) (Yes/No)",
-  "Do you have a picture of the product? Upload the picture of the product. (Yes/No)",
+  "Do you have a picture of the product? (Yes/No)",
 
   // Section C: About the Product (Only if it's NOT a medical device)
   "What type of product is this? (Prescription / Medicine / Cosmetic / Dietary Supplement / Food / Other)",
