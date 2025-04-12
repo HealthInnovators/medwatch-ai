@@ -133,6 +133,8 @@ const prompt = ai.definePrompt({
 
   Your goal is to ask relevant questions and clarify user responses to efficiently and accurately collect information for the report.  Maintain a conversational tone.
 
+  The user has indicated they had an issue with pills. You should only follow up with questions about pills, not medical devices.
+
   Here's the user's input: {{{userInput}}}
   
   Current question index: {{{currentQuestionIndex}}}
@@ -173,10 +175,21 @@ const aiReportingAssistantFlow = ai.defineFlow<
 
   // Check if we should skip Section D
   let skipSectionD = false;
-  if (reportData['question_7'] && typeof reportData['question_7'] === 'string') {
-    const productType = reportData['question_7'].toLowerCase();
-    skipSectionD = productType.includes('pill') || productType.includes('syrup') || productType.includes('injection');
-  }
+  let askSectionC = false;
+
+  // Determine if the conversation history suggests a medication issue
+  const medicationMentioned = conversationHistory.some(message =>
+    message.content.toLowerCase().includes('pill') ||
+    message.content.toLowerCase().includes('syrup') ||
+    message.content.toLowerCase().includes('injection') ||
+    reportData['question_7'] && typeof reportData['question_7'] === 'string' && (reportData['question_7'].toLowerCase().includes('cosmetic') || reportData['question_7'].toLowerCase().includes('dietary supplement') || reportData['question_7'].toLowerCase().includes('food') || reportData['question_7'].toLowerCase().includes('other'))
+  );
+
+    if (reportData['question_7'] && typeof reportData['question_7'] === 'string') {
+        const productType = reportData['question_7'].toLowerCase();
+        skipSectionD = productType.includes('cosmetic') || productType.includes('dietary supplement') || productType.includes('food') || productType.includes('other');
+        askSectionC = !skipSectionD
+    }
 
   if (conversationHistory.length === 0) {
     // If it's a new conversation, start with the first question.
@@ -194,8 +207,17 @@ const aiReportingAssistantFlow = ai.defineFlow<
     nextQuestionIndex = currentQuestionIndex + 1;
 
     // Skip Section D if necessary
-    if (skipSectionD && nextQuestionIndex === 27) {
+    if (medicationMentioned && nextQuestionIndex >= 27 && nextQuestionIndex <= 36) {
       nextQuestionIndex = 37; // Jump to Section E
+    }
+    else if (skipSectionD && nextQuestionIndex >= 27 && nextQuestionIndex <= 36) {
+        nextQuestionIndex = 37; // Jump to Section E
+    }
+
+    // Skip Section C if medical device is mentioned
+    if (!medicationMentioned && askSectionC && nextQuestionIndex >= 8 && nextQuestionIndex <= 26) {
+      // Skip Section C
+      nextQuestionIndex = 27; // Jump to Section D
     }
 
     if (nextQuestionIndex < feedbackQuestions.length) {
