@@ -115,6 +115,17 @@ export default function Home() {
     setUserInput((prevInput) => prevInput + transcript);
   };
 
+  const formatReportSummary = (reviewResult: any) => {
+    let formattedSummary = '';
+    for (const key in reviewResult) {
+      if (reviewResult.hasOwnProperty(key)) {
+        formattedSummary += `${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:\n`; // Add title
+        formattedSummary += `${reviewResult[key]}\n\n`; // Add feedback and double line break for separation
+      }
+    }
+    return formattedSummary;
+  };
+
   const handlePreSubmissionReview = async () => {
     if (!conversationHistory || conversationHistory.length === 0) {
       alert('No conversation history available for review.');
@@ -131,7 +142,7 @@ export default function Home() {
     };
 
     const reviewResult = await preSubmissionReview(reviewInput);
-    setReportSummary(JSON.stringify(reviewResult, null, 2)); // Format the JSON for readability
+    setReportSummary(formatReportSummary(reviewResult));
   };
 
   const handleSubmitReport = () => {

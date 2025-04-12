@@ -109,47 +109,36 @@ const feedbackQuestions = [
   "Do you want to stay anonymous from the manufacturer? (Yes/No)",
 ];
 
-const prompt = ai.definePrompt({
-  name: 'aiReportingAssistantPrompt',
+const spellCheckAndUnderstandPrompt = ai.definePrompt({
+  name: 'spellCheckAndUnderstandPrompt',
   input: {
     schema: z.object({
-      userInput: z.string().describe('The user input for the conversation.'),
-      conversationHistory: z.array(z.object({
-        role: z.enum(['user', 'assistant']),
-        content: z.string(),
-      })).optional().describe('The conversation history.'),
-      currentQuestionIndex: z.number().optional().describe('The index of the current question being asked.'),
-      reportData: z.record(z.any()).optional().describe('Data collected so far for the report.'),
+      text: z.string().describe('The user input text that may contain spelling errors.'),
+      currentQuestion: z.string().describe('The current question being asked to the user.'),
     }),
   },
   output: {
     schema: z.object({
-      response: z.string().describe('The AI assistant response.'),
-      nextQuestionIndex: z.number().optional().describe('The index of the next question to be asked.'),
-      isEndOfQuestions: z.boolean().optional().describe('Indicates that all questions have been asked.'),
+      correctedText: z.string().describe('The user input text with spelling corrected.'),
+      intentSummary: z.string().describe('A brief summary of the user\'s intent based on their response.'),
     }),
   },
-  prompt: `You are an AI assistant designed to guide users through the adverse event reporting process for the FDA's MedWatch program.
+  prompt: `Correct the spelling in the following text, and provide a summary of the user's intent in relation to the question being asked.
 
-  Your goal is to ask relevant questions and clarify user responses to efficiently and accurately collect information for the report.  Maintain a conversational tone.
+  Question: {{{currentQuestion}}}
 
-  The user has indicated they had an issue with pills. You should only follow up with questions about pills, not medical devices.
+  Text: {{{text}}}
 
-  Here's the user's input: {{{userInput}}}
-  
-  Current question index: {{{currentQuestionIndex}}}
-
-  Here's the conversation history:
-  {{conversationHistory}}
-
-  Based on the user's input, current question, and the conversation history, respond appropriately.
-  If this is the start of a new conversation (currentQuestionIndex is not defined), begin by asking the first question from the list.
-  If the user provides an unclear response, ask follow-up questions to get more details.
-  Once a question is answered, move to the next question in the list.
-  If all questions have been asked, summarize the information collected and ask the user if they would like to review the report.
-  Remember to maintain HIPAA compliance.
-  `,
+  Output the corrected text and a summary of the user's intent.`,
 });
+
+async function spellCheckAndUnderstand(text: string, currentQuestion: string): Promise<{correctedText: string, intentSummary: string}> {
+  const {output} = await spellCheckAndUnderstandPrompt({
+    text: text,
+    currentQuestion: currentQuestion,
+  });
+  return output!;
+}
 
 const aiReportingAssistantFlow = ai.defineFlow<
   typeof AiReportingAssistantInputSchema,
@@ -162,11 +151,6 @@ const aiReportingAssistantFlow = ai.defineFlow<
   const {userInput, conversationHistory = [], currentQuestionIndex = 0, reportData = {}} = input;
   // Trim whitespace from the user input to handle voice input effectively
   const trimmedUserInput = userInput.trim();
-
-  // Format conversation history
-  const formattedConversationHistory = conversationHistory
-    .map(message => `${message.role === 'user' ? 'User' : 'Assistant'}: ${message.content}`)
-    .join('\n');
 
   let nextQuestionIndex = currentQuestionIndex;
   let response = '';
@@ -181,15 +165,14 @@ const aiReportingAssistantFlow = ai.defineFlow<
   const medicationMentioned = conversationHistory.some(message =>
     message.content.toLowerCase().includes('pill') ||
     message.content.toLowerCase().includes('syrup') ||
-    message.content.toLowerCase().includes('injection') ||
-    reportData['question_7'] && typeof reportData['question_7'] === 'string' && (reportData['question_7'].toLowerCase().includes('cosmetic') || reportData['question_7'].toLowerCase().includes('dietary supplement') || reportData['question_7'].toLowerCase().includes('food') || reportData['question_7'].toLowerCase().includes('other'))
+    message.content.toLowerCase().includes('injection')
   );
 
-    if (reportData['question_7'] && typeof reportData['question_7'] === 'string') {
-        const productType = reportData['question_7'].toLowerCase();
-        skipSectionD = productType.includes('cosmetic') || productType.includes('dietary supplement') || productType.includes('food') || productType.includes('other');
-        askSectionC = !skipSectionD
-    }
+  if (reportData['question_7'] && typeof reportData['question_7'] === 'string') {
+    const productType = reportData['question_7'].toLowerCase();
+    skipSectionD = productType.includes('cosmetic') || productType.includes('dietary supplement') || productType.includes('food') || productType.includes('other');
+    askSectionC = !skipSectionD;
+  }
 
   if (conversationHistory.length === 0) {
     // If it's a new conversation, start with the first question.
@@ -197,11 +180,15 @@ const aiReportingAssistantFlow = ai.defineFlow<
     nextQuestionIndex = 0; // Initialize currentQuestionIndex
   }
   else if (currentQuestionIndex < feedbackQuestions.length) {
+    // Autocorrect the spelling in the user's input
+    const currentQuestion = feedbackQuestions[currentQuestionIndex];
+    const {correctedText} = await spellCheckAndUnderstand(trimmedUserInput, currentQuestion);
+
     // Respond to the user's input to the current question
-    response = `Okay, I have recorded: ${trimmedUserInput}. `;
+    response = `Okay, I have recorded: ${correctedText}. `;
 
     // Update report data with the user's input
-    updatedReportData[`question_${currentQuestionIndex}`] = trimmedUserInput;
+    updatedReportData[`question_${currentQuestionIndex}`] = correctedText;
 
     // Move to the next question
     nextQuestionIndex = currentQuestionIndex + 1;
@@ -211,7 +198,7 @@ const aiReportingAssistantFlow = ai.defineFlow<
       nextQuestionIndex = 37; // Jump to Section E
     }
     else if (skipSectionD && nextQuestionIndex >= 27 && nextQuestionIndex <= 36) {
-        nextQuestionIndex = 37; // Jump to Section E
+      nextQuestionIndex = 37; // Jump to Section E
     }
 
     // Skip Section C if medical device is mentioned
@@ -230,13 +217,6 @@ const aiReportingAssistantFlow = ai.defineFlow<
     response = "Thank you! All questions have been answered.  Would you like me to summarize the report?";
     isEndOfQuestions = true;
   }
-
-  const {output} = await prompt({
-    userInput: trimmedUserInput,
-    conversationHistory: formattedConversationHistory,
-    currentQuestionIndex: currentQuestionIndex,
-    reportData: updatedReportData,
-  });
 
   const newAssistantMessage = {
     role: 'assistant',
