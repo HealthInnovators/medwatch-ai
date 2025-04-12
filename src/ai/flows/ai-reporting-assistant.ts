@@ -182,7 +182,7 @@ const aiReportingAssistantFlow = ai.defineFlow<
     const {correctedText} = await spellCheckAndUnderstand(trimmedUserInput, currentQuestion);
 
     // Respond to the user's input to the current question
-    response = `Okay, I have recorded: ${correctedText}. `;
+    response = `Okay, I have recorded: ${correctedText.replace(/\.+$/, '')}. `;
 
     // Update report data with the user's input
     updatedReportData[`question_${currentQuestionIndex}`] = correctedText;
