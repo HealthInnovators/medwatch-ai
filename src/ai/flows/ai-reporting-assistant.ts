@@ -75,8 +75,8 @@ const feedbackQuestions = [
   // Section D: About the Medical Device (Only if the product is a medical device)
   "Name of the medical device?",
   "Manufacturer of the device?",
-  "Model number?",
-  "Catalog number?",
+  "Lot number?",
+  "NDC (National Drug Code) number?",
   "Lot number?",
   "Serial number?",
   "UDI (Unique Device Identifier) number?",
@@ -157,23 +157,20 @@ const aiReportingAssistantFlow = ai.defineFlow<
   let isEndOfQuestions = false;
   let updatedReportData = {...reportData};
 
-  // Check if we should skip Section D
-  let skipSectionD = false;
-  let askSectionC = false;
-
   // Determine if the conversation history suggests a medication issue
   const medicationMentioned = conversationHistory.some(message =>
     message.content.toLowerCase().includes('pill') ||
     message.content.toLowerCase().includes('syrup') ||
     message.content.toLowerCase().includes('injection')
   );
+  let skipSectionD = false;
+  let askSectionC = false;
 
   if (reportData['question_7'] && typeof reportData['question_7'] === 'string') {
     const productType = reportData['question_7'].toLowerCase();
     skipSectionD = productType.includes('cosmetic') || productType.includes('dietary supplement') || productType.includes('food') || productType.includes('other');
     askSectionC = !skipSectionD;
   }
-
   if (conversationHistory.length === 0) {
     // If it's a new conversation, start with the first question.
     response = feedbackQuestions[0];
