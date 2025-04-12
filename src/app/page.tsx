@@ -15,35 +15,41 @@ const VoiceInput = ({onResult}: { onResult: (transcript: string) => void }) => {
   const recognitionRef = useRef<SpeechRecognitionService | null>(null);
 
   useEffect(() => {
-    const recognitionService = new SpeechRecognitionService();
-    recognitionRef.current = recognitionService;
+    let recognitionService: SpeechRecognitionService | null = null;
+    try {
+      recognitionService = new SpeechRecognitionService();
+      recognitionRef.current = recognitionService;
 
-    recognitionService.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      onResult(transcript);
-    };
+      recognitionService.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        onResult(transcript);
+      };
 
-    recognitionService.onstart = () => {
-      setIsListening(true);
-    };
+      recognitionService.onstart = () => {
+        setIsListening(true);
+      };
 
-    recognitionService.onend = () => {
-      setIsListening(false);
-    };
-
-    recognitionService.onerror = (event) => {
-      if (event.error === 'aborted') {
-        // Do not treat "aborted" as a general error. It happens normally when the user pauses.
-        console.log('Speech recognition aborted.');
+      recognitionService.onend = () => {
         setIsListening(false);
-        return;
-      }
-      console.error('Speech recognition error:', event.error);
+      };
+
+      recognitionService.onerror = (event) => {
+        if (event.error === 'aborted') {
+          // Do not treat "aborted" as a general error. It happens normally when the user pauses.
+          console.log('Speech recognition aborted.');
+          setIsListening(false);
+          return;
+        }
+        console.error('Speech recognition error:', event);
+        setIsListening(false);
+      };
+    } catch (error) {
+      console.error('Error initializing SpeechRecognitionService:', error);
       setIsListening(false);
-    };
+    }
 
     return () => {
-      recognitionService.abort();
+      recognitionService?.abort();
     };
   }, [onResult]);
 
@@ -66,6 +72,7 @@ const VoiceInput = ({onResult}: { onResult: (transcript: string) => void }) => {
     <Button
       variant="outline"
       onClick={toggleListening}
+      disabled={!recognitionRef.current}
     >
       {isListening ? (
         <>
@@ -111,8 +118,12 @@ export default function Home() {
     setIsEndOfQuestions(aiResult.isEndOfQuestions || false);
   };
 
-  const handleVoiceInputResult = (transcript: string) => {
-    setUserInput((prevInput) => prevInput + transcript);
+  const handleVoiceInputResult = async (transcript: string) => {
+    if (currentQuestionIndex !== undefined) {
+      const currentQuestion = feedbackQuestions[currentQuestionIndex];
+      const {correctedText} = await spellCheckAndUnderstand(transcript, currentQuestion);
+      setUserInput((prevInput) => prevInput + correctedText);
+    }
   };
 
   const formatReportSummary = (reviewResult: any) => {
@@ -183,7 +194,7 @@ export default function Home() {
             }}
           />
           <VoiceInput onResult={handleVoiceInputResult}/>
-          <Button onClick={handleSendMessage}>Send</Button>
+          <Button className="ml-2" onClick={handleSendMessage}>Send</Button>
         </CardFooter>
       </Card>
 
@@ -234,3 +245,75 @@ export default function Home() {
     </div>
   );
 }
+
+const feedbackQuestions = [
+  // Section A: About the Problem
+  "What kind of problem did you experience?\n • Were you hurt or did you have a bad side effect?\n • Did you use a product incorrectly?\n • Did you notice a quality issue with the product?\n • Did the problem occur after switching from one product maker to another?", //0
+  "What was the outcome of the problem? (Check all that apply)\n • Hospitalization (Admitted or stayed longer)\n • Required help to prevent permanent harm\n • Disability or long-term health problem\n • Birth defect\n • Life-threatening event\n • Death (Include date)\n • Other serious/important incidents (Please describe)", //1
+  "What date did the problem occur?", //2
+  "Describe what happened, how it happened, and why you think it happened. (Include as many details as possible. FDA may reach out to you for any additional documents if necessary)", //3
+  "Were there any relevant lab tests or lab results? (Mention all the lab tests, lab results and dates performed)", //4
+
+  // Section B: Product Availability
+  "Do you still have the product in case we need to evaluate it? (Do not send the product to FDA. We will contact you directly if we need it.) (Yes/No)", //5
+  "Do you have a picture of the product? (Yes/No)", //6
+
+  // Section C: About the Product (Only if it's NOT a medical device)
+  "What type of product is this? (Medicine / Cosmetic / Dietary Supplement / Food / Medical Device, Other)", //7
+  "What is the name of the product (as shown on packaging)?", //8
+  "Is the therapy still ongoing?", //9
+  "Who is the manufacturer or company that makes the product?", //10
+  "What type of product is it? (Select all that apply)\n  • Over-the-Counter\n  • Compounded\n  • Generic\n  • Biosimilar", //11
+  "Expiration date of the product?", //12
+  "Lot number?", //13
+  "NDC (National Drug Code) number?", //14
+  "Strength of the product (e.g., 800mg)?", //15
+  "Quantity used each time (e.g., 2 pills, 1 teaspoon)?", //16
+  "How frequently was it taken? (e.g., twice a day)", //17
+  "How was the product used? (e.g., orally, injection, on skin)", //18
+  "When did the person start using the product?", //19
+  "When did the person stop using the product?", //20
+  "Was the dosage ever reduced? When?", //21
+  "Approximate duration of use?", //22
+  "What was the product being used to treat?", //23
+  "Did the problem stop when the product was reduced or stopped? (Yes/No)", //24
+  "Did the problem return if the product was used again? (Yes/No/Didn’t restart)", //25
+
+  // Section D: About the Medical Device (Only if the product is a medical device)
+  "Name of the medical device?", //26
+  "Manufacturer of the device?", //27
+  "Model number?", //28
+  "Catalog number?", //29
+  "Lot number?", //30
+  "Serial number?", //31
+  "UDI (Unique Device Identifier) number?", //32
+  "Expiration date?", //33
+  "Was someone using the device when the problem occurred? If yes, who was using it? (Patient / Healthcare provider / Other)", //34
+  "For implants:\n • When was the device implanted?\n • Was it removed? When?", //35
+
+  // Section E: About the Person Who Had the Problem
+  "Person’s initials?", //36
+  "Sex at birth? (Male/Female/Undifferentiated/Prefer not to say)", //37
+  "Gender identity? (List options)", //38
+  "Age (and unit: years/months/days)?", //39
+  "Date of birth?", //40
+  "Weight (in lb/kg)?", //41
+  "Ethnicity? (Hispanic/Latino or Not)", //42
+  "Race? (Select all that apply)", //43
+  "List any known medical conditions (e.g., diabetes, cancer)", //44
+  "List any allergies (e.g., to drugs, food, pollen)", //45
+  "Other important info (e.g., pregnancy, tobacco, alcohol)", //46
+  "List all current prescription medications and medical devices", //47
+  "List all over-the-counter meds, supplements, herbs, vitamins", //48
+
+  // Section F: About the Person Submitting the Report
+  "Your name (first and last)?", //49
+  "Your address (street, city, state, ZIP, country)?", //50
+  "Your phone number?", //51
+  "Your email address?", //52
+  "Today’s date?", //53
+  "Did you report the problem to the product’s manufacturer? (Yes/No)", //54
+  "Do you want to stay anonymous from the manufacturer? (Yes/No)", //55
+];
+
+
