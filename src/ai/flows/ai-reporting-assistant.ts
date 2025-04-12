@@ -53,7 +53,7 @@ const feedbackQuestions = [
   "Do you have a picture of the product? (Yes/No)", //6
 
   // Section C: About the Product (Only if it's NOT a medical device)
-  "What type of product is this? (Medicine / Cosmetic / Dietary Supplement / Food / Other)", //7
+  "What type of product is this? (Medicine / Cosmetic / Dietary Supplement / Food / Medical Device, Other)", //7
   "What is the name of the product (as shown on packaging)?", //8
   "Is the therapy still ongoing?", //9
   "Who is the manufacturer or company that makes the product?", //10
