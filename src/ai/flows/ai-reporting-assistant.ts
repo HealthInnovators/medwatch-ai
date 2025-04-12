@@ -52,7 +52,7 @@ const feedbackQuestions = [
   "Do you have a picture of the product? (Yes/No)",
 
   // Section C: About the Product (Only if it's NOT a medical device)
-  "What type of product is this? (Cosmetic / Dietary Supplement / Food / Other)",
+  "What type of product is this? (Medicine / Cosmetic / Dietary Supplement / Food / Other)",
   "What is the name of the product (as shown on packaging)?",
   "Is the therapy still ongoing?",
   "Who is the manufacturer or company that makes the product?",
@@ -81,7 +81,7 @@ const feedbackQuestions = [
   "Serial number?",
   "UDI (Unique Device Identifier) number?",
   "Expiration date?",
-  "Was someone using the device when the problem occurred? If yes, who was using it? (Patient / Healthcare provider / Other)",
+  "Was someone using the device when the problem occurred?",
   "For implants: When was the device implanted? Was it removed? When?",
 
   // Section E: About the Person Who Had the Problem
