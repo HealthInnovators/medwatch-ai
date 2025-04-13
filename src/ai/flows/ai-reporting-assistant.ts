@@ -162,6 +162,10 @@ const aiReportingAssistantFlow = ai.defineFlow<
   let skipSectionD = false;
   let askSectionC = false;
 
+  // Check if the user is correcting a previous answer
+  const correctionRegex = /i made a mistake for the above answer, here is my corrected answer - /i;
+  const isCorrection = correctionRegex.test(trimmedUserInput);
+
   //Determine if the product is a medical device.
   if (reportData['question_7'] && typeof reportData['question_7'] === 'string') {
     const productType = reportData['question_7'].toLowerCase();
@@ -181,49 +185,62 @@ const aiReportingAssistantFlow = ai.defineFlow<
     // Respond to the user's input to the current question
     response = `Okay, I have recorded: ${correctedText.replace(/\.+$/, '')}. `;
 
-    // Update report data with the user's input
-    updatedReportData[`question_${currentQuestionIndex}`] = correctedText;
-
-    // Move to the next question
-    nextQuestionIndex = currentQuestionIndex + 1;
-
-    // Determine if the product is a medical device or medication based on reportData and conversationHistory
-    let isMedicalDevice = false;
-    let isMedication = false;
-
-    if (reportData['question_7'] && typeof reportData['question_7'] === 'string') {
-      const productType = reportData['question_7'].toLowerCase();
-      isMedicalDevice = productType.includes('medical device');
-      isMedication = productType.includes('medicine') || productType.includes('prescription') || productType.includes('over-the-counter');
-    } else {
-      // If question 7 hasn't been answered yet, check the conversation history for mentions of medical devices or medication
-      const lastUserInput = conversationHistory.length > 0 ? conversationHistory[conversationHistory.length - 1].content.toLowerCase() : '';
-      isMedicalDevice = lastUserInput.includes('medical device') || lastUserInput.includes('device');
-      isMedication = lastUserInput.includes('medicine') || lastUserInput.includes('medication') || lastUserInput.includes('pill') || lastUserInput.includes('syrup') || lastUserInput.includes('injection');
+    if (isCorrection) {
+      // Extract the corrected answer
+      const correctedAnswer = correctedText.replace(correctionRegex, '').trim();
+      // Get the index of the question the user is correcting
+      const questionNumber = conversationHistory.length > 0 ? (conversationHistory.length - 1) / 2 : 0; // Assuming 2 messages per question
+      // Update report data with the user's corrected input
+      updatedReportData[`question_${questionNumber}`] = correctedAnswer;
+      response = `Okay, I have corrected question ${questionNumber}: ${correctedAnswer.replace(/\.+$/, '')}. `;
+      nextQuestionIndex = currentQuestionIndex;
+      response += feedbackQuestions[nextQuestionIndex];
     }
+    else {
+      // Update report data with the user's input
+      updatedReportData[`question_${currentQuestionIndex}`] = correctedText;
 
-    // Skip Section D if necessary
-    if ((isMedication || askSectionC) && nextQuestionIndex >= 26 && nextQuestionIndex <= 35) {
-      nextQuestionIndex = 36; // Jump to Section E
-      console.log('Skipping to section E: ', nextQuestionIndex);
-    }
-    else if (skipSectionD && nextQuestionIndex >= 26 && nextQuestionIndex <= 35) {
-      nextQuestionIndex = 36; // Jump to Section E
-      console.log('Skipping to section E: ', nextQuestionIndex);
-    }
+      // Move to the next question
+      nextQuestionIndex = currentQuestionIndex + 1;
 
-    // Skip Section C if medical device is mentioned
-    if (isMedicalDevice && askSectionC && nextQuestionIndex >= 8 && nextQuestionIndex <= 25) {
-      // Skip Section C
-      nextQuestionIndex = 26; // Jump to Section D
-      console.log('Skipping to section D: ', nextQuestionIndex);
-    }
+      // Determine if the product is a medical device or medication based on reportData and conversationHistory
+      let isMedicalDevice = false;
+      let isMedication = false;
 
-    if (nextQuestionIndex < feedbackQuestions.length) {
-      response += feedbackQuestions[nextQuestionIndex]; // Ask the next question
-    } else {
-      response += "Thank you! All questions have been answered.  Would you like me to summarize the report?";
-      isEndOfQuestions = true;
+      if (reportData['question_7'] && typeof reportData['question_7'] === 'string') {
+        const productType = reportData['question_7'].toLowerCase();
+        isMedicalDevice = productType.includes('medical device');
+        isMedication = productType.includes('medicine') || productType.includes('prescription') || productType.includes('over-the-counter');
+      } else {
+        // If question 7 hasn't been answered yet, check the conversation history for mentions of medical devices or medication
+        const lastUserInput = conversationHistory.length > 0 ? conversationHistory[conversationHistory.length - 1].content.toLowerCase() : '';
+        isMedicalDevice = lastUserInput.includes('medical device') || lastUserInput.includes('device');
+        isMedication = lastUserInput.includes('medicine') || lastUserInput.includes('medication') || lastUserInput.includes('pill') || lastUserInput.includes('syrup') || lastUserInput.includes('injection');
+      }
+
+      // Skip Section D if necessary
+      if ((isMedication || askSectionC) && nextQuestionIndex >= 26 && nextQuestionIndex <= 35) {
+        nextQuestionIndex = 36; // Jump to Section E
+        console.log('Skipping to section E: ', nextQuestionIndex);
+      }
+      else if (skipSectionD && nextQuestionIndex >= 26 && nextQuestionIndex <= 35) {
+        nextQuestionIndex = 36; // Jump to Section E
+        console.log('Skipping to section E: ', nextQuestionIndex);
+      }
+
+      // Skip Section C if medical device is mentioned
+      if (isMedicalDevice && askSectionC && nextQuestionIndex >= 8 && nextQuestionIndex <= 25) {
+        // Skip Section C
+        nextQuestionIndex = 26; // Jump to Section D
+        console.log('Skipping to section D: ', nextQuestionIndex);
+      }
+
+      if (nextQuestionIndex < feedbackQuestions.length) {
+        response += feedbackQuestions[nextQuestionIndex]; // Ask the next question
+      } else {
+        response += "Thank you! All questions have been answered.  Would you like me to summarize the report?";
+        isEndOfQuestions = true;
+      }
     }
   } else {
     response = "Thank you! All questions have been answered.  Would you like me to summarize the report?";
