@@ -9,6 +9,10 @@ import {Input} from '@/components/ui/input';
 import {Textarea} from '@/components/ui/textarea';
 import {SpeechRecognitionService} from '@/services/speech-recognition';
 import {Icons} from '@/components/icons';
+import {useToast} from "@/hooks/use-toast";
+import {useSupabaseClient} from '@supabase/auth-helpers-react';
+import {v4 as uuidv4} from 'uuid';
+import {useRouter} from 'next/navigation';
 
 const VoiceInput = ({onResult}: { onResult: (transcript: string) => void }) => {
   const [isListening, setIsListening] = useState(false);
@@ -97,6 +101,9 @@ export default function Home() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [reportData, setReportData] = useState({});
   const [isEndOfQuestions, setIsEndOfQuestions] = useState(false);
+  const {toast} = useToast();
+  const supabase = useSupabaseClient();
+  const router = useRouter();
 
   const handleSendMessage = async () => {
     if (!userInput) return;
@@ -119,11 +126,7 @@ export default function Home() {
   };
 
   const handleVoiceInputResult = async (transcript: string) => {
-    if (currentQuestionIndex !== undefined) {
-      const currentQuestion = feedbackQuestions[currentQuestionIndex];
-      const {correctedText} = await spellCheckAndUnderstand(transcript, currentQuestion);
-      setUserInput((prevInput) => prevInput + correctedText);
-    }
+    setUserInput((prevInput) => prevInput + transcript);
   };
 
   const formatReportSummary = (reviewResult: any) => {
@@ -156,9 +159,37 @@ export default function Home() {
     setReportSummary(formatReportSummary(reviewResult));
   };
 
-  const handleSubmitReport = () => {
-    // Implement your report submission logic here
-    alert('Report submitted!');
+  const handleSubmitReport = async () => {
+    const reportId = uuidv4();
+    const conversationText = conversationHistory
+      .map((message) => `${message.role}: ${message.content}`)
+      .join('\n');
+
+    const {data, error} = await supabase
+      .from('reports')
+      .insert([
+        {
+          id: reportId,
+          report_data: conversationText,
+          report_summary: reportSummary,
+        },
+      ]);
+
+    if (error) {
+      toast({
+        title: 'Error submitting report',
+        description: 'There was an error submitting your report. Please try again.',
+        variant: 'destructive',
+      });
+      console.error('Error submitting report:', error);
+    } else {
+      toast({
+        title: 'Report submitted',
+        description: 'Your report has been submitted successfully.',
+      });
+      // Redirect to a confirmation page or clear the form
+      router.refresh(); // Refresh the route to clear the form
+    }
   };
 
   return (
@@ -193,7 +224,9 @@ export default function Home() {
               }
             }}
           />
-          <VoiceInput onResult={handleVoiceInputResult}/>
+          <div className="ml-2 mr-2">
+            <VoiceInput onResult={handleVoiceInputResult}/>
+          </div>
           <Button className="ml-2" onClick={handleSendMessage}>Send</Button>
         </CardFooter>
       </Card>
@@ -315,5 +348,6 @@ const feedbackQuestions = [
   "Did you report the problem to the product’s manufacturer? (Yes/No)", //54
   "Do you want to stay anonymous from the manufacturer? (Yes/No)", //55
 ];
+
 
 
